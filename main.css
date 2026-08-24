@@ -161,6 +161,39 @@ nav a:focus-visible {
   outline: none;
 }
 
+.menu-toggle {
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(239, 83, 80, 0.5);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu-toggle span {
+  display: block;
+  height: 2px;
+  margin: 5px 0;
+  background: var(--tk-text-light);
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.menu-toggle[aria-expanded='true'] span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.menu-toggle[aria-expanded='true'] span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle[aria-expanded='true'] span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
 /* =========================================
    COMMON SECTION LAYOUTS
    ========================================= */
@@ -1290,23 +1323,40 @@ footer {
 
 @media (max-width: 768px) {
   header {
-    flex-direction: column;
-
-    gap: 0.45rem;
+    flex-wrap: wrap;
+    gap: 0;
     padding-top: 0.35rem;
     padding-bottom: 0.65rem;
   }
 
+  .site-logo {
+    height: 76px;
+  }
+
+  .menu-toggle {
+    display: block;
+    margin-left: auto;
+  }
+
   nav {
-    justify-content: center;
-    gap: 0.45rem 1rem;
-    padding: 0.65rem 0 0;
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0 0;
     border-top: 1px solid rgba(239, 83, 80, 0.25);
     border-left: 0;
   }
 
+  nav.is-open {
+    display: flex;
+  }
+
   nav a {
-    font-size: 0.78rem;
+    padding: 0.7rem 0.25rem;
+    font-size: 0.82rem;
   }
 
   .hero h1 {
