@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.location.hash === '#partners') {
+    window.history.replaceState(
+      null,
+      '',
+      window.location.pathname + window.location.search,
+    );
+    window.scrollTo(0, 0);
+  }
+
   const menuToggle = document.querySelector('.menu-toggle');
   const navigation = document.getElementById('site-navigation');
 
