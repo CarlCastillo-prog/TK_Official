@@ -1,11 +1,19 @@
+const navigationEntry = performance.getEntriesByType('navigation')[0];
+const isPageReload = navigationEntry?.type === 'reload';
+
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.location.hash === '#partners') {
+  if (isPageReload) {
     window.history.replaceState(
       null,
       '',
       window.location.pathname + window.location.search,
     );
     window.scrollTo(0, 0);
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   }
 
   const menuToggle = document.querySelector('.menu-toggle');
