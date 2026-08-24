@@ -5,17 +5,29 @@ if ('scrollRestoration' in window.history) {
   window.history.scrollRestoration = 'manual';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (isPageReload) {
-    window.history.replaceState(
-      null,
-      '',
-      window.location.pathname + window.location.search,
-    );
-    window.scrollTo(0, 0);
-    requestAnimationFrame(() => window.scrollTo(0, 0));
+function resetPageAfterReload() {
+  if (!isPageReload) {
+    return;
   }
 
+  window.history.replaceState(
+    null,
+    '',
+    window.location.pathname + window.location.search,
+  );
+  window.scrollTo(0, 0);
+}
+
+window.addEventListener('load', () => {
+  resetPageAfterReload();
+  setTimeout(resetPageAfterReload, 0);
+});
+
+window.addEventListener('pageshow', () => {
+  setTimeout(resetPageAfterReload, 0);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
   const menuToggle = document.querySelector('.menu-toggle');
   const navigation = document.getElementById('site-navigation');
 
