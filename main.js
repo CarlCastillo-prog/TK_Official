@@ -59,10 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStreamers();
 
   document.getElementById('streamer-prev')?.addEventListener('click', () => {
-    updateFeaturedStreamer(featuredStreamerIndex - 1);
+    updateFeaturedStreamer(featuredStreamerIndex - 1, true);
   });
   document.getElementById('streamer-next')?.addEventListener('click', () => {
-    updateFeaturedStreamer(featuredStreamerIndex + 1);
+    updateFeaturedStreamer(featuredStreamerIndex + 1, true);
   });
 
   // 4. Role Filter Buttons
@@ -847,7 +847,7 @@ function renderStreamers() {
       dot.textContent = streamer.ign;
       dot.setAttribute('aria-label', `Show ${streamer.ign}`);
       dot.setAttribute('aria-pressed', index === featuredStreamerIndex);
-      dot.addEventListener('click', () => updateFeaturedStreamer(index));
+      dot.addEventListener('click', () => updateFeaturedStreamer(index, true));
       dotsContainer.appendChild(dot);
     });
   }
@@ -855,7 +855,7 @@ function renderStreamers() {
   updateFeaturedStreamer(featuredStreamerIndex);
 }
 
-function updateFeaturedStreamer(index) {
+function updateFeaturedStreamer(index, shouldScrollTab = false) {
   const track = document.getElementById('public-streamers-list');
   const dots = document.querySelectorAll('.streamer-ign-tab');
   if (!track || streamerMembers.length === 0) return;
@@ -874,8 +874,14 @@ function updateFeaturedStreamer(index) {
     dot.setAttribute('aria-pressed', dotIndex === featuredStreamerIndex);
   });
 
-  const activeTab = dots[featuredStreamerIndex];
-  activeTab?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  if (shouldScrollTab) {
+    const activeTab = dots[featuredStreamerIndex];
+    activeTab?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }
 }
 
 /* ==========================================================================
