@@ -1,11 +1,13 @@
 // admin.js - Top Kings Admin Portal Management Script
 
 let pendingRequests = [];
+let referralRequests = [];
 let activeRoster = [];
 let activeStreamers = [];
 let currentRoleFilter = 'ALL';
 let currentVersionFilter = 'ALL';
 let pendingApprovalId = null;
+let pendingApprovalSource = 'pending';
 let pendingKickId = null;
 let adminPortalInitialized = false;
 
@@ -56,10 +58,27 @@ function initAdminPortal() {
 
   // Navigation Tab Switching
   const tabButtons = document.querySelectorAll('.tab-btn');
+  const adminMenuToggle = document.getElementById('admin-menu-toggle');
+  const adminTabButtons = document.getElementById('admin-tab-buttons');
+
+  if (adminMenuToggle && adminTabButtons) {
+    adminMenuToggle.addEventListener('click', () => {
+      const isExpanded =
+        adminMenuToggle.getAttribute('aria-expanded') === 'true';
+      adminMenuToggle.setAttribute('aria-expanded', String(!isExpanded));
+      adminTabButtons.classList.toggle('open', !isExpanded);
+    });
+  }
+
   tabButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const tabId = button.getAttribute('data-tab');
       switchTab(tabId, button);
+
+      if (adminMenuToggle && adminTabButtons) {
+        adminMenuToggle.setAttribute('aria-expanded', 'false');
+        adminTabButtons.classList.remove('open');
+      }
     });
   });
 
@@ -72,6 +91,11 @@ function initAdminPortal() {
   const pendingSearchInput = document.getElementById('pending-search');
   if (pendingSearchInput) {
     pendingSearchInput.addEventListener('input', renderRequests);
+  }
+
+  const referralSearchInput = document.getElementById('referral-search');
+  if (referralSearchInput) {
+    referralSearchInput.addEventListener('input', renderReferralRequests);
   }
 
   const streamerSearchInput = document.getElementById('streamer-search');
@@ -234,10 +258,14 @@ function switchTab(tabId, targetBtn) {
 // Load Storage Data
 function loadData() {
   const savedRequests = localStorage.getItem('tk_requests');
+  const savedReferralRequests = localStorage.getItem('tk_referral_requests');
   const savedRoster = localStorage.getItem('tk_roster');
   const savedStreamers = localStorage.getItem('tk_streamers');
 
   pendingRequests = savedRequests ? JSON.parse(savedRequests) : [];
+  referralRequests = savedReferralRequests
+    ? JSON.parse(savedReferralRequests)
+    : [];
   activeRoster = savedRoster ? JSON.parse(savedRoster) : [];
   activeStreamers = savedStreamers ? JSON.parse(savedStreamers) : [];
 
@@ -257,14 +285,17 @@ function loadData() {
   localStorage.setItem('tk_streamers', JSON.stringify(activeStreamers));
 
   const pendingCount = document.getElementById('pending-count');
+  const referralCount = document.getElementById('referral-count');
   const rosterCount = document.getElementById('roster-count');
 
   if (pendingCount) pendingCount.innerText = pendingRequests.length;
+  if (referralCount) referralCount.innerText = referralRequests.length;
   if (rosterCount) rosterCount.innerText = activeRoster.length;
   const streamerCount = document.getElementById('streamer-count');
   if (streamerCount) streamerCount.innerText = activeStreamers.length;
 
   renderRequests();
+  renderReferralRequests();
   renderAdminRoster();
   renderAdminStreamers();
 }
@@ -273,6 +304,7 @@ function loadData() {
 window.addEventListener('storage', (event) => {
   if (
     event.key === 'tk_requests' ||
+    event.key === 'tk_referral_requests' ||
     event.key === 'tk_roster' ||
     event.key === 'tk_streamers'
   ) {
@@ -282,20 +314,44 @@ window.addEventListener('storage', (event) => {
 
 // Render Pending Application Cards
 function renderRequests() {
-  const container = document.getElementById('requests-list');
+  renderRequestList(
+    pendingRequests,
+    'requests-list',
+    'pending-search',
+    'pending',
+  );
+}
+
+function renderReferralRequests() {
+  renderRequestList(
+    referralRequests,
+    'referrals-list',
+    'referral-search',
+    'referral',
+  );
+}
+
+function renderRequestList(requests, containerId, searchId, source) {
+  const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
 
-  const searchInput = document.getElementById('pending-search');
+  const searchInput = document.getElementById(searchId);
   const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  const filteredRequests = pendingRequests.filter((request) =>
-    [request.ign, request.name, request.role, request.uid]
+  const filteredRequests = requests.filter((request) =>
+    [request.ign, request.name, request.role, request.uid, request.referredBy]
       .filter(Boolean)
       .some((value) => value.toString().toLowerCase().includes(searchQuery)),
   );
 
   if (filteredRequests.length === 0) {
-    container.innerHTML = `<p class="empty-state">${pendingRequests.length === 0 ? 'No pending registration requests.' : 'No applicants match your search.'}</p>`;
+    const emptyMessage =
+      requests.length === 0
+        ? source === 'referral'
+          ? 'No referrals applications.'
+          : 'No pending registration requests.'
+        : 'No applicants match your search.';
+    container.innerHTML = `<p class="empty-state">${emptyMessage}</p>`;
     return;
   }
 
@@ -314,11 +370,11 @@ function renderRequests() {
                 <span class="applicant-view-label">View credentials &rsaquo;</span>
             </div>
         `;
-    card.addEventListener('click', () => openApplicantModal(req.id));
+    card.addEventListener('click', () => openApplicantModal(req.id, source));
     card.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        openApplicantModal(req.id);
+        openApplicantModal(req.id, source);
       }
     });
     container.appendChild(card);
@@ -399,8 +455,12 @@ function closeStreamerModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function openApplicantModal(id) {
-  const req = pendingRequests.find((request) => request.id === id);
+function getRequestQueue(source) {
+  return source === 'referral' ? referralRequests : pendingRequests;
+}
+
+function openApplicantModal(id, source = 'pending') {
+  const req = getRequestQueue(source).find((request) => request.id === id);
   if (!req) return;
 
   const nameElement = document.getElementById('applicant-modal-name');
@@ -414,6 +474,7 @@ function openApplicantModal(id) {
 
   nameElement.textContent = `${req.ign} (${req.name})`;
   detailsElement.innerHTML = `
+    <p><strong>Referred By</strong><span>${req.referredBy || 'None'}</span></p>
     <p><strong>Preferred Role</strong><span>${req.role}</span></p>
     <p><strong>UID</strong><span>${req.uid}</span></p>
     <p><strong>Streamer Mode ID</strong><span>${req.streamerId}</span></p>
@@ -432,11 +493,11 @@ function openApplicantModal(id) {
 
   approveButton.onclick = () => {
     closeApplicantModal();
-    openApprovalModal(id);
+    openApprovalModal(id, source);
   };
   rejectButton.onclick = () => {
     closeApplicantModal();
-    rejectMember(id);
+    rejectMember(id, source);
   };
   modal.style.display = 'flex';
 }
@@ -513,11 +574,12 @@ function renderAdminRoster() {
 }
 
 // Approval Modal Handlers
-function openApprovalModal(id) {
-  const req = pendingRequests.find((r) => r.id === id);
+function openApprovalModal(id, source = 'pending') {
+  const req = getRequestQueue(source).find((r) => r.id === id);
   if (!req) return;
 
   pendingApprovalId = id;
+  pendingApprovalSource = source;
   const nameElem = document.getElementById('approval-applicant-name');
   if (nameElem) nameElem.innerText = `${req.ign} (${req.role})`;
 
@@ -534,7 +596,8 @@ function closeApprovalModal() {
 function confirmApproval(versionChoice) {
   if (!pendingApprovalId) return;
 
-  const req = pendingRequests.find((r) => r.id === pendingApprovalId);
+  const requestQueue = getRequestQueue(pendingApprovalSource);
+  const req = requestQueue.find((r) => r.id === pendingApprovalId);
   if (!req) return;
 
   const newMember = {
@@ -546,10 +609,20 @@ function confirmApproval(versionChoice) {
   };
 
   activeRoster.unshift(newMember);
-  pendingRequests = pendingRequests.filter((r) => r.id !== pendingApprovalId);
+  if (pendingApprovalSource === 'referral') {
+    referralRequests = referralRequests.filter(
+      (r) => r.id !== pendingApprovalId,
+    );
+  } else {
+    pendingRequests = pendingRequests.filter((r) => r.id !== pendingApprovalId);
+  }
 
   localStorage.setItem('tk_roster', JSON.stringify(activeRoster));
   localStorage.setItem('tk_requests', JSON.stringify(pendingRequests));
+  localStorage.setItem(
+    'tk_referral_requests',
+    JSON.stringify(referralRequests),
+  );
 
   closeApprovalModal();
   loadData();
@@ -616,10 +689,18 @@ function confirmKick() {
 }
 
 // Rejection Handler
-function rejectMember(id) {
+function rejectMember(id, source = 'pending') {
   if (confirm('Are you sure you want to reject this registration request?')) {
-    pendingRequests = pendingRequests.filter((r) => r.id !== id);
-    localStorage.setItem('tk_requests', JSON.stringify(pendingRequests));
+    if (source === 'referral') {
+      referralRequests = referralRequests.filter((r) => r.id !== id);
+      localStorage.setItem(
+        'tk_referral_requests',
+        JSON.stringify(referralRequests),
+      );
+    } else {
+      pendingRequests = pendingRequests.filter((r) => r.id !== id);
+      localStorage.setItem('tk_requests', JSON.stringify(pendingRequests));
+    }
     loadData();
   }
 }

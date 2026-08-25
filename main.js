@@ -914,6 +914,7 @@ async function submitForm(e) {
       ign: document.getElementById('ign').value,
       uid: document.getElementById('uid').value,
       streamerId: document.getElementById('streamerId').value,
+      referredBy: document.getElementById('referredBy').value.trim() || 'None',
       fbLink: document.getElementById('fbLink').value,
       role: document.getElementById('role').value,
       gameProfileImg: gameProfileImg,
@@ -921,21 +922,63 @@ async function submitForm(e) {
       submittedAt: Date.now(),
     };
 
+    const requestKey =
+      newReq.referredBy.toLowerCase() === 'none'
+        ? 'tk_requests'
+        : 'tk_referral_requests';
     const existingRequests = JSON.parse(
-      localStorage.getItem('tk_requests') || '[]',
+      localStorage.getItem(requestKey) || '[]',
     );
     existingRequests.push(newReq);
-    localStorage.setItem('tk_requests', JSON.stringify(existingRequests));
+    localStorage.setItem(requestKey, JSON.stringify(existingRequests));
 
-    alert(
-      `Application for ${newReq.ign} submitted successfully! Top Kings admins will review your application.`,
+    showApplicationStatus(
+      'success',
+      'APPLICATION RECEIVED',
+      'Application Submitted',
+      `Application for ${newReq.ign} was submitted successfully. Top Kings admins will review your application.`,
     );
     e.target.reset();
   } catch (err) {
-    alert(
+    showApplicationStatus(
+      'error',
+      'SUBMISSION COULD NOT BE SAVED',
+      'Try Smaller Images',
       'Image file size is too large for LocalStorage. Please upload smaller images.',
     );
   }
+}
+
+function showApplicationStatus(type, kicker, title, message) {
+  const modal = document.getElementById('applicationStatusModal');
+  const content = modal?.querySelector('.application-status-content');
+  const icon = document.getElementById('application-status-icon');
+  const kickerElement = document.getElementById('application-status-kicker');
+  const titleElement = document.getElementById('application-status-title');
+  const messageElement = document.getElementById('application-status-message');
+
+  if (
+    !modal ||
+    !content ||
+    !icon ||
+    !kickerElement ||
+    !titleElement ||
+    !messageElement
+  ) {
+    return;
+  }
+
+  content.classList.toggle('is-error', type === 'error');
+  icon.textContent = type === 'error' ? '!' : 'TK';
+  kickerElement.textContent = kicker;
+  titleElement.textContent = title;
+  messageElement.textContent = message;
+  modal.style.display = 'flex';
+}
+
+function closeApplicationStatus() {
+  const modal = document.getElementById('applicationStatusModal');
+  if (modal) modal.style.display = 'none';
 }
 
 function openModal() {
@@ -986,4 +1029,9 @@ window.onclick = function (e) {
 
   const thirdMonthModal = document.getElementById('thirdMonthModal');
   if (e.target === thirdMonthModal) closeThirdMonthModal();
+
+  const applicationStatusModal = document.getElementById(
+    'applicationStatusModal',
+  );
+  if (e.target === applicationStatusModal) closeApplicationStatus();
 };
